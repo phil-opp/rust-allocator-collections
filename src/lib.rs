@@ -70,17 +70,19 @@
        test(no_crate_inject, attr(allow(unused_variables), deny(warnings))))]
 #![no_std]
 
-#![feature(box_syntax)]
+#![feature(coerce_unsized)]
 #![feature(custom_attribute)]
 #![feature(fundamental)]
 #![feature(lang_items)]
 #![feature(optin_builtin_traits)]
 #![feature(placement_in_syntax)]
+#![feature(raw)]
 #![feature(staged_api)]
 #![feature(unboxed_closures)]
 #![feature(unique)]
 #![feature(unsafe_no_drop_flag, filling_drop)]
 #![feature(dropck_parametricity)]
+#![feature(unsize)]
 #![feature(const_fn)]
 
 #![feature(needs_allocator)]
@@ -107,6 +109,18 @@ extern crate log;
 
 pub mod heap;
 
+// Need to conditionally define the mod from `boxed.rs` to avoid
+// duplicating the lang-items when building in test cfg; but also need
+// to allow code to have `use boxed::HEAP;`
+// and `use boxed::Box;` declarations.
+#[cfg(not(test))]
+pub mod boxed;
+#[cfg(test)]
+mod boxed {
+    pub use std::boxed::{Box, HEAP};
+}
+#[cfg(test)]
+mod boxed_test;
 pub mod raw_vec;
 
 pub mod allocator;
