@@ -84,7 +84,9 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM
-    pub fn with_capacity<A>(cap: usize, allocator: &mut A) -> Option<Self> where A: Allocator {
+    pub fn with_capacity<A>(cap: usize, allocator: &mut A) -> Option<Self>
+        where A: Allocator
+    {
         unsafe {
             let elem_size = mem::size_of::<T>();
 
@@ -186,7 +188,9 @@ impl<T> RawVec<T> {
     /// ```
     #[inline(never)]
     #[cold]
-    pub fn double<A>(&mut self, allocator: &mut A) -> Result<(),()> where A: Allocator {
+    pub fn double<A>(&mut self, allocator: &mut A) -> Result<(), ()>
+        where A: Allocator
+    {
         unsafe {
             let elem_size = mem::size_of::<T>();
 
@@ -212,9 +216,9 @@ impl<T> RawVec<T> {
                 let new_alloc_size = new_cap * elem_size;
                 alloc_guard(new_alloc_size);
                 let ptr = allocator.reallocate(self.ptr() as *mut _,
-                                           self.cap * elem_size,
-                                           new_alloc_size,
-                                           align);
+                                               self.cap * elem_size,
+                                               new_alloc_size,
+                                               align);
                 (new_cap, ptr)
             };
 
@@ -243,7 +247,9 @@ impl<T> RawVec<T> {
     ///   `isize::MAX` bytes.
     #[inline(never)]
     #[cold]
-    pub fn double_in_place<A>(&mut self, allocator: &mut A) -> bool where A: Allocator {
+    pub fn double_in_place<A>(&mut self, allocator: &mut A) -> bool
+        where A: Allocator
+    {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -259,9 +265,9 @@ impl<T> RawVec<T> {
 
             alloc_guard(new_alloc_size);
             let size = allocator.reallocate_inplace(self.ptr() as *mut _,
-                                                self.cap * elem_size,
-                                                new_alloc_size,
-                                                align);
+                                                    self.cap * elem_size,
+                                                    new_alloc_size,
+                                                    align);
             if size >= new_alloc_size {
                 // We can't directly divide `size`.
                 self.cap = new_cap;
@@ -290,7 +296,13 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM
-    pub fn reserve_exact<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) -> Result<(), ()> where A: Allocator {
+    pub fn reserve_exact<A>(&mut self,
+                            used_cap: usize,
+                            needed_extra_cap: usize,
+                            allocator: &mut A)
+                            -> Result<(), ()>
+        where A: Allocator
+    {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -315,14 +327,14 @@ impl<T> RawVec<T> {
                 allocator.allocate(new_alloc_size, align)
             } else {
                 allocator.reallocate(self.ptr() as *mut _,
-                                 self.cap * elem_size,
-                                 new_alloc_size,
-                                 align)
+                                     self.cap * elem_size,
+                                     new_alloc_size,
+                                     align)
             };
 
             // If allocate or reallocate fail, we'll get `null` back
             if ptr.is_null() {
-                return Err(())
+                return Err(());
             }
 
             self.ptr = Unique::new(ptr as *mut _);
@@ -391,7 +403,13 @@ impl<T> RawVec<T> {
     ///     }
     /// }
     /// ```
-    pub fn reserve<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) -> Result<(), ()> where A: Allocator {
+    pub fn reserve<A>(&mut self,
+                      used_cap: usize,
+                      needed_extra_cap: usize,
+                      allocator: &mut A)
+                      -> Result<(), ()>
+        where A: Allocator
+    {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -415,9 +433,9 @@ impl<T> RawVec<T> {
                 allocator.allocate(new_alloc_size, align)
             } else {
                 allocator.reallocate(self.ptr() as *mut _,
-                                 self.cap * elem_size,
-                                 new_alloc_size,
-                                 align)
+                                     self.cap * elem_size,
+                                     new_alloc_size,
+                                     align)
             };
 
             // If allocate or reallocate fail, we'll get `null` back
@@ -448,7 +466,13 @@ impl<T> RawVec<T> {
     /// * Panics if the requested capacity exceeds `usize::MAX` bytes.
     /// * Panics on 32-bit platforms if the requested capacity exceeds
     ///   `isize::MAX` bytes.
-    pub fn reserve_in_place<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) -> bool where A: Allocator {
+    pub fn reserve_in_place<A>(&mut self,
+                               used_cap: usize,
+                               needed_extra_cap: usize,
+                               allocator: &mut A)
+                               -> bool
+        where A: Allocator
+    {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -470,9 +494,9 @@ impl<T> RawVec<T> {
             alloc_guard(new_alloc_size);
 
             let size = allocator.reallocate_inplace(self.ptr() as *mut _,
-                                                self.cap * elem_size,
-                                                new_alloc_size,
-                                                align);
+                                                    self.cap * elem_size,
+                                                    new_alloc_size,
+                                                    align);
             if size >= new_alloc_size {
                 self.cap = new_alloc_size / elem_size;
             }
@@ -490,7 +514,9 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM.
-    pub fn shrink_to_fit<A>(&mut self, amount: usize, allocator: &mut A) -> Result<(), ()> where A: Allocator {
+    pub fn shrink_to_fit<A>(&mut self, amount: usize, allocator: &mut A) -> Result<(), ()>
+        where A: Allocator
+    {
         let elem_size = mem::size_of::<T>();
         let align = mem::align_of::<T>();
 
@@ -510,9 +536,9 @@ impl<T> RawVec<T> {
                 // Overflow check is unnecessary as the vector is already at
                 // least this large.
                 let ptr = allocator.reallocate(self.ptr() as *mut _,
-                                           self.cap * elem_size,
-                                           amount * elem_size,
-                                           align);
+                                               self.cap * elem_size,
+                                               amount * elem_size,
+                                               align);
                 if ptr.is_null() {
                     return Err(());
                 }

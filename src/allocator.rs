@@ -23,7 +23,12 @@ pub unsafe trait Allocator {
     /// The `old_size` and `align` parameters are the parameters that were used to
     /// create the allocation referenced by `ptr`. The `old_size` parameter may be
     /// any value in range_inclusive(requested_size, usable_size).
-    unsafe fn reallocate(&mut self, ptr: *mut u8, old_size: usize, size: usize, align: usize) -> *mut u8;
+    unsafe fn reallocate(&mut self,
+                         ptr: *mut u8,
+                         old_size: usize,
+                         size: usize,
+                         align: usize)
+                         -> *mut u8;
 
     /// Resize the allocation referenced by `ptr` to `size` bytes.
     ///
@@ -37,11 +42,12 @@ pub unsafe trait Allocator {
     /// The `old_size` and `align` parameters are the parameters that were used to
     /// create the allocation referenced by `ptr`. The `old_size` parameter may be
     /// any value in range_inclusive(requested_size, usable_size).
-    unsafe fn reallocate_inplace(&mut self, ptr: *mut u8,
-                                     old_size: usize,
-                                     size: usize,
-                                     align: usize)
-                                     -> usize;
+    unsafe fn reallocate_inplace(&mut self,
+                                 ptr: *mut u8,
+                                 old_size: usize,
+                                 size: usize,
+                                 align: usize)
+                                 -> usize;
 
     /// Deallocates the memory referenced by `ptr`.
     ///
