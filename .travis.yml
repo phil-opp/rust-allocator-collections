@@ -10,4 +10,4 @@ notifications:
         on_success: never
         on_failure: change
 
-script: sh scripts/travis-update.sh
+script: cargo build
