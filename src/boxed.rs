@@ -80,7 +80,6 @@ use core::raw::TraitObject;
 ///     let foo = box 5;
 /// }
 /// ```
-pub const HEAP: ExchangeHeapSingleton = ExchangeHeapSingleton { _force_singleton: () };
 
 /// This the singleton type used solely for `boxed::HEAP`.
 #[derive(Copy, Clone)]

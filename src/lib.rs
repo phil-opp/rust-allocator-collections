@@ -79,6 +79,10 @@
 #![feature(unsize)]
 #![feature(const_fn)]
 
+#![feature(core_intrinsics)]
+#![feature(drop_in_place)]
+#![feature(nonzero)]
+
 #![feature(needs_allocator)]
 
 // Issue# 30592: Systematically use alloc_system during stage0 since jemalloc
@@ -101,18 +105,30 @@ extern crate log;
 
 // Heaps provided for low-level allocation strategies
 
-pub mod heap;
+mod heap;
+mod raw_vec;
+mod range;
+mod borrow;
+mod btree;
 
 // Need to conditionally define the mod from `boxed.rs` to avoid
 // duplicating the lang-items when building in test cfg; but also need
 // to allow code to have `use boxed::HEAP;`
 // and `use boxed::Box;` declarations.
 #[cfg(not(test))]
-pub mod boxed;
+mod boxed;
 #[cfg(test)]
 mod boxed {
     pub use std::boxed::{Box, HEAP};
 }
-pub mod raw_vec;
 
 pub mod allocator;
+pub mod vec;
+
+pub mod btree_map {
+    pub use btree::map::*;
+}
+
+pub mod btree_set {
+    pub use btree::set::*;
+}
