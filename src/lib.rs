@@ -69,28 +69,19 @@
        issue_tracker_base_url = "https://github.com/rust-lang/rust/issues/",
        test(no_crate_inject, attr(allow(unused_variables), deny(warnings))))]
 #![no_std]
-#![needs_allocator]
 
-#![feature(allocator)]
 #![feature(box_syntax)]
-#![feature(coerce_unsized)]
 #![feature(core_intrinsics)]
 #![feature(custom_attribute)]
 #![feature(fundamental)]
 #![feature(lang_items)]
 #![feature(optin_builtin_traits)]
 #![feature(placement_in_syntax)]
-#![feature(placement_new_protocol)]
-#![feature(raw)]
-#![feature(shared)]
 #![feature(staged_api)]
 #![feature(unboxed_closures)]
 #![feature(unique)]
 #![feature(unsafe_no_drop_flag, filling_drop)]
 #![feature(dropck_parametricity)]
-#![feature(unsize)]
-#![feature(drop_in_place)]
-#![feature(fn_traits)]
 #![feature(const_fn)]
 
 #![feature(needs_allocator)]
@@ -117,23 +108,8 @@ extern crate log;
 
 pub mod heap;
 
-// Primitive types using the heaps above
-
-// Need to conditionally define the mod from `boxed.rs` to avoid
-// duplicating the lang-items when building in test cfg; but also need
-// to allow code to have `use boxed::HEAP;`
-// and `use boxed::Box;` declarations.
-#[cfg(not(test))]
-pub mod boxed;
-#[cfg(test)]
-mod boxed {
-    pub use std::boxed::{Box, HEAP};
-}
-#[cfg(test)]
-mod boxed_test;
-pub mod arc;
-pub mod rc;
 pub mod raw_vec;
 pub mod oom;
 
 pub use oom::oom;
+pub mod allocator;

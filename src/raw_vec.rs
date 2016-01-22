@@ -10,10 +10,9 @@
 
 use core::ptr::Unique;
 use core::mem;
-use core::slice;
+use allocator::Allocator;
 use heap;
 use super::oom;
-use super::boxed::Box;
 use core::ops::Drop;
 use core::cmp;
 
@@ -86,7 +85,7 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM
-    pub fn with_capacity(cap: usize) -> Self {
+    pub fn with_capacity<A>(cap: usize, allocator: &mut A) -> Self where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
 
@@ -98,7 +97,7 @@ impl<T> RawVec<T> {
                 heap::EMPTY as *mut u8
             } else {
                 let align = mem::align_of::<T>();
-                let ptr = heap::allocate(alloc_size, align);
+                let ptr = allocator.allocate(alloc_size, align);
                 if ptr.is_null() {
                     oom()
                 }
@@ -123,15 +122,6 @@ impl<T> RawVec<T> {
         RawVec {
             ptr: Unique::new(ptr),
             cap: cap,
-        }
-    }
-
-    /// Converts a `Box<[T]>` into a `RawVec<T>`.
-    pub fn from_box(mut slice: Box<[T]>) -> Self {
-        unsafe {
-            let result = RawVec::from_raw_parts(slice.as_mut_ptr(), slice.len());
-            mem::forget(slice);
-            result
         }
     }
 }
@@ -197,7 +187,7 @@ impl<T> RawVec<T> {
     /// ```
     #[inline(never)]
     #[cold]
-    pub fn double(&mut self) {
+    pub fn double<A>(&mut self, allocator: &mut A) where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
 
@@ -214,7 +204,7 @@ impl<T> RawVec<T> {
                 } else {
                     4
                 };
-                let ptr = heap::allocate(new_cap * elem_size, align);
+                let ptr = allocator.allocate(new_cap * elem_size, align);
                 (new_cap, ptr)
             } else {
                 // Since we guarantee that we never allocate more than isize::MAX bytes,
@@ -222,7 +212,7 @@ impl<T> RawVec<T> {
                 let new_cap = 2 * self.cap;
                 let new_alloc_size = new_cap * elem_size;
                 alloc_guard(new_alloc_size);
-                let ptr = heap::reallocate(self.ptr() as *mut _,
+                let ptr = allocator.reallocate(self.ptr() as *mut _,
                                            self.cap * elem_size,
                                            new_alloc_size,
                                            align);
@@ -253,7 +243,7 @@ impl<T> RawVec<T> {
     ///   `isize::MAX` bytes.
     #[inline(never)]
     #[cold]
-    pub fn double_in_place(&mut self) -> bool {
+    pub fn double_in_place<A>(&mut self, allocator: &mut A) -> bool where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -268,7 +258,7 @@ impl<T> RawVec<T> {
             let new_alloc_size = new_cap * elem_size;
 
             alloc_guard(new_alloc_size);
-            let size = heap::reallocate_inplace(self.ptr() as *mut _,
+            let size = allocator.reallocate_inplace(self.ptr() as *mut _,
                                                 self.cap * elem_size,
                                                 new_alloc_size,
                                                 align);
@@ -300,7 +290,7 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM
-    pub fn reserve_exact(&mut self, used_cap: usize, needed_extra_cap: usize) {
+    pub fn reserve_exact<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -322,9 +312,9 @@ impl<T> RawVec<T> {
             alloc_guard(new_alloc_size);
 
             let ptr = if self.cap == 0 {
-                heap::allocate(new_alloc_size, align)
+                allocator.allocate(new_alloc_size, align)
             } else {
-                heap::reallocate(self.ptr() as *mut _,
+                allocator.reallocate(self.ptr() as *mut _,
                                  self.cap * elem_size,
                                  new_alloc_size,
                                  align)
@@ -400,7 +390,7 @@ impl<T> RawVec<T> {
     ///     }
     /// }
     /// ```
-    pub fn reserve(&mut self, used_cap: usize, needed_extra_cap: usize) {
+    pub fn reserve<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -421,9 +411,9 @@ impl<T> RawVec<T> {
             alloc_guard(new_alloc_size);
 
             let ptr = if self.cap == 0 {
-                heap::allocate(new_alloc_size, align)
+                allocator.allocate(new_alloc_size, align)
             } else {
-                heap::reallocate(self.ptr() as *mut _,
+                allocator.reallocate(self.ptr() as *mut _,
                                  self.cap * elem_size,
                                  new_alloc_size,
                                  align)
@@ -456,7 +446,7 @@ impl<T> RawVec<T> {
     /// * Panics if the requested capacity exceeds `usize::MAX` bytes.
     /// * Panics on 32-bit platforms if the requested capacity exceeds
     ///   `isize::MAX` bytes.
-    pub fn reserve_in_place(&mut self, used_cap: usize, needed_extra_cap: usize) -> bool {
+    pub fn reserve_in_place<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) -> bool where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -477,7 +467,7 @@ impl<T> RawVec<T> {
             // FIXME: may crash and burn on over-reserve
             alloc_guard(new_alloc_size);
 
-            let size = heap::reallocate_inplace(self.ptr() as *mut _,
+            let size = allocator.reallocate_inplace(self.ptr() as *mut _,
                                                 self.cap * elem_size,
                                                 new_alloc_size,
                                                 align);
@@ -498,7 +488,7 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM.
-    pub fn shrink_to_fit(&mut self, amount: usize) {
+    pub fn shrink_to_fit<A>(&mut self, amount: usize, allocator: &mut A) where A: Allocator {
         let elem_size = mem::size_of::<T>();
         let align = mem::align_of::<T>();
 
@@ -517,7 +507,7 @@ impl<T> RawVec<T> {
             unsafe {
                 // Overflow check is unnecessary as the vector is already at
                 // least this large.
-                let ptr = heap::reallocate(self.ptr() as *mut _,
+                let ptr = allocator.reallocate(self.ptr() as *mut _,
                                            self.cap * elem_size,
                                            amount * elem_size,
                                            align);
@@ -530,22 +520,6 @@ impl<T> RawVec<T> {
         }
     }
 
-    /// Converts the entire buffer into `Box<[T]>`.
-    ///
-    /// While it is not *strictly* Undefined Behavior to call
-    /// this procedure while some of the RawVec is unintialized,
-    /// it cetainly makes it trivial to trigger it.
-    ///
-    /// Note that this will correctly reconstitute any `cap` changes
-    /// that may have been performed. (see description of type for details)
-    pub unsafe fn into_box(self) -> Box<[T]> {
-        // NOTE: not calling `cap()` here, actually using the real `cap` field!
-        let slice = slice::from_raw_parts_mut(self.ptr(), self.cap);
-        let output: Box<[T]> = Box::from_raw(slice);
-        mem::forget(self);
-        output
-    }
-
     /// This is a stupid name in the hopes that someone will find this in the
     /// not too distant future and remove it with the rest of
     /// #[unsafe_no_drop_flag]
@@ -555,18 +529,9 @@ impl<T> RawVec<T> {
 }
 
 impl<T> Drop for RawVec<T> {
-    #[unsafe_destructor_blind_to_params]
     /// Frees the memory owned by the RawVec *without* trying to Drop its contents.
     fn drop(&mut self) {
-        let elem_size = mem::size_of::<T>();
-        if elem_size != 0 && self.cap != 0 && self.unsafe_no_drop_flag_needs_drop() {
-            let align = mem::align_of::<T>();
-
-            let num_bytes = elem_size * self.cap;
-            unsafe {
-                heap::deallocate(*self.ptr as *mut _, num_bytes, align);
-            }
-        }
+        unimplemented!();
     }
 }
 
