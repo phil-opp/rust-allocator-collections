@@ -118,8 +118,6 @@ pub mod boxed;
 mod boxed {
     pub use std::boxed::{Box, HEAP};
 }
-#[cfg(test)]
-mod boxed_test;
 pub mod raw_vec;
 
 pub mod allocator;
