@@ -51,8 +51,6 @@
 //! for a `Cons`. By introducing a `Box`, which has a defined size, we know how
 //! big `Cons` needs to be.
 
-#![stable(feature = "rust1", since = "1.0.0")]
-
 use allocator::Allocator;
 
 use core::any::Any;
@@ -82,15 +80,9 @@ use core::raw::TraitObject;
 ///     let foo = box 5;
 /// }
 /// ```
-#[unstable(feature = "box_heap",
-           reason = "may be renamed; uncertain about custom allocator design",
-           issue = "27779")]
 pub const HEAP: ExchangeHeapSingleton = ExchangeHeapSingleton { _force_singleton: () };
 
 /// This the singleton type used solely for `boxed::HEAP`.
-#[unstable(feature = "box_heap",
-           reason = "may be renamed; uncertain about custom allocator design",
-           issue = "27779")]
 #[derive(Copy, Clone)]
 pub struct ExchangeHeapSingleton {
     _force_singleton: (),
@@ -99,7 +91,6 @@ pub struct ExchangeHeapSingleton {
 /// A pointer type for heap allocation.
 ///
 /// See the [module-level documentation](../../std/boxed/index.html) for more.
-#[stable(feature = "rust1", since = "1.0.0")]
 pub struct Box<T: ?Sized>(Unique<T>);
 
 impl<T> Box<T> {
@@ -110,7 +101,6 @@ impl<T> Box<T> {
     /// ```
     /// let five = Box::new(5);
     /// ```
-    #[stable(feature = "rust1", since = "1.0.0")]
     #[inline(always)]
     pub fn new<A>(x: T, allocator: &mut A) -> Option<Box<T>> where A: Allocator {
         let ptr = unsafe { allocator.allocate(mem::size_of::<T>(), mem::align_of::<T>()) };
@@ -137,7 +127,6 @@ impl<T: ?Sized> Box<T> {
     /// This function is unsafe because improper use may lead to
     /// memory problems. For example, a double-free may occur if the
     /// function is called twice on the same raw pointer.
-    #[stable(feature = "box_raw", since = "1.4.0")]
     #[inline]
     pub unsafe fn from_raw(raw: *mut T) -> Self {
         mem::transmute(raw)
@@ -158,14 +147,12 @@ impl<T: ?Sized> Box<T> {
     /// let raw = Box::into_raw(seventeen);
     /// let boxed_again = unsafe { Box::from_raw(raw) };
     /// ```
-    #[stable(feature = "box_raw", since = "1.4.0")]
     #[inline]
     pub fn into_raw(b: Box<T>) -> *mut T {
         unsafe { mem::transmute(b) }
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized + PartialEq> PartialEq for Box<T> {
     #[inline]
     fn eq(&self, other: &Box<T>) -> bool {
@@ -176,7 +163,6 @@ impl<T: ?Sized + PartialEq> PartialEq for Box<T> {
         PartialEq::ne(&**self, &**other)
     }
 }
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized + PartialOrd> PartialOrd for Box<T> {
     #[inline]
     fn partial_cmp(&self, other: &Box<T>) -> Option<Ordering> {
@@ -199,17 +185,14 @@ impl<T: ?Sized + PartialOrd> PartialOrd for Box<T> {
         PartialOrd::gt(&**self, &**other)
     }
 }
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized + Ord> Ord for Box<T> {
     #[inline]
     fn cmp(&self, other: &Box<T>) -> Ordering {
         Ord::cmp(&**self, &**other)
     }
 }
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized + Eq> Eq for Box<T> {}
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized + Hash> Hash for Box<T> {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         (**self).hash(state);
@@ -218,7 +201,6 @@ impl<T: ?Sized + Hash> Hash for Box<T> {
 
 impl Box<Any> {
     #[inline]
-    #[stable(feature = "rust1", since = "1.0.0")]
     /// Attempt to downcast the box to a concrete type.
     pub fn downcast<T: Any>(self) -> Result<Box<T>, Box<Any>> {
         if self.is::<T>() {
@@ -238,7 +220,6 @@ impl Box<Any> {
 
 impl Box<Any + Send> {
     #[inline]
-    #[stable(feature = "rust1", since = "1.0.0")]
     /// Attempt to downcast the box to a concrete type.
     pub fn downcast<T: Any>(self) -> Result<Box<T>, Box<Any + Send>> {
         <Box<Any>>::downcast(self).map_err(|s| unsafe {
@@ -248,21 +229,18 @@ impl Box<Any + Send> {
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: fmt::Display + ?Sized> fmt::Display for Box<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&**self, f)
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: fmt::Debug + ?Sized> fmt::Debug for Box<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T> fmt::Pointer for Box<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // It's not possible to extract the inner Uniq directly from the Box,
@@ -272,7 +250,6 @@ impl<T> fmt::Pointer for Box<T> {
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized> Deref for Box<T> {
     type Target = T;
 
@@ -281,14 +258,12 @@ impl<T: ?Sized> Deref for Box<T> {
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized> DerefMut for Box<T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe{self.0.get_mut()}
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<I: Iterator + ?Sized> Iterator for Box<I> {
     type Item = I::Item;
     fn next(&mut self) -> Option<I::Item> {
@@ -298,40 +273,33 @@ impl<I: Iterator + ?Sized> Iterator for Box<I> {
         (**self).size_hint()
     }
 }
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<I: DoubleEndedIterator + ?Sized> DoubleEndedIterator for Box<I> {
     fn next_back(&mut self) -> Option<I::Item> {
         (**self).next_back()
     }
 }
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<I: ExactSizeIterator + ?Sized> ExactSizeIterator for Box<I> {}
 
-#[unstable(feature = "coerce_unsized", issue = "27732")]
 impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<Box<U>> for Box<T> {}
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized> borrow::Borrow<T> for Box<T> {
     fn borrow(&self) -> &T {
         &**self
     }
 }
 
-#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: ?Sized> borrow::BorrowMut<T> for Box<T> {
     fn borrow_mut(&mut self) -> &mut T {
         &mut **self
     }
 }
 
-#[stable(since = "1.5.0", feature = "smart_ptr_as_ref")]
 impl<T: ?Sized> AsRef<T> for Box<T> {
     fn as_ref(&self) -> &T {
         &**self
     }
 }
 
-#[stable(since = "1.5.0", feature = "smart_ptr_as_ref")]
 impl<T: ?Sized> AsMut<T> for Box<T> {
     fn as_mut(&mut self) -> &mut T {
         &mut **self
