@@ -12,7 +12,6 @@ use core::ptr::Unique;
 use core::mem;
 use allocator::Allocator;
 use heap;
-use super::oom;
 use core::ops::Drop;
 use core::cmp;
 
@@ -85,7 +84,7 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM
-    pub fn with_capacity<A>(cap: usize, allocator: &mut A) -> Self where A: Allocator {
+    pub fn with_capacity<A>(cap: usize, allocator: &mut A) -> Option<Self> where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
 
@@ -99,15 +98,15 @@ impl<T> RawVec<T> {
                 let align = mem::align_of::<T>();
                 let ptr = allocator.allocate(alloc_size, align);
                 if ptr.is_null() {
-                    oom()
+                    return None;
                 }
                 ptr
             };
 
-            RawVec {
+            Some(RawVec {
                 ptr: Unique::new(ptr as *mut _),
                 cap: cap,
-            }
+            })
         }
     }
 
@@ -187,7 +186,7 @@ impl<T> RawVec<T> {
     /// ```
     #[inline(never)]
     #[cold]
-    pub fn double<A>(&mut self, allocator: &mut A) where A: Allocator {
+    pub fn double<A>(&mut self, allocator: &mut A) -> Result<(),()> where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
 
@@ -221,11 +220,12 @@ impl<T> RawVec<T> {
 
             // If allocate or reallocate fail, we'll get `null` back
             if ptr.is_null() {
-                oom()
+                return Err(());
             }
 
             self.ptr = Unique::new(ptr as *mut _);
             self.cap = new_cap;
+            Ok(())
         }
     }
 
@@ -290,7 +290,7 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM
-    pub fn reserve_exact<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) where A: Allocator {
+    pub fn reserve_exact<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) -> Result<(), ()> where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -303,7 +303,7 @@ impl<T> RawVec<T> {
             // Don't actually need any more capacity.
             // Wrapping in case they gave a bad `used_cap`.
             if self.cap().wrapping_sub(used_cap) >= needed_extra_cap {
-                return;
+                return Ok(());
             }
 
             // Nothing we can really do about these checks :(
@@ -322,11 +322,12 @@ impl<T> RawVec<T> {
 
             // If allocate or reallocate fail, we'll get `null` back
             if ptr.is_null() {
-                oom()
+                return Err(())
             }
 
             self.ptr = Unique::new(ptr as *mut _);
             self.cap = new_cap;
+            Ok(())
         }
     }
 
@@ -390,7 +391,7 @@ impl<T> RawVec<T> {
     ///     }
     /// }
     /// ```
-    pub fn reserve<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) where A: Allocator {
+    pub fn reserve<A>(&mut self, used_cap: usize, needed_extra_cap: usize, allocator: &mut A) -> Result<(), ()> where A: Allocator {
         unsafe {
             let elem_size = mem::size_of::<T>();
             let align = mem::align_of::<T>();
@@ -403,7 +404,7 @@ impl<T> RawVec<T> {
             // Don't actually need any more capacity.
             // Wrapping in case they give a bad `used_cap`
             if self.cap().wrapping_sub(used_cap) >= needed_extra_cap {
-                return;
+                return Ok(());
             }
 
             let (new_cap, new_alloc_size) = self.amortized_new_size(used_cap, needed_extra_cap);
@@ -421,11 +422,12 @@ impl<T> RawVec<T> {
 
             // If allocate or reallocate fail, we'll get `null` back
             if ptr.is_null() {
-                oom()
+                return Err(());
             }
 
             self.ptr = Unique::new(ptr as *mut _);
             self.cap = new_cap;
+            Ok(())
         }
     }
 
@@ -488,14 +490,14 @@ impl<T> RawVec<T> {
     /// # Aborts
     ///
     /// Aborts on OOM.
-    pub fn shrink_to_fit<A>(&mut self, amount: usize, allocator: &mut A) where A: Allocator {
+    pub fn shrink_to_fit<A>(&mut self, amount: usize, allocator: &mut A) -> Result<(), ()> where A: Allocator {
         let elem_size = mem::size_of::<T>();
         let align = mem::align_of::<T>();
 
         // Set the `cap` because they might be about to promote to a `Box<[T]>`
         if elem_size == 0 {
             self.cap = amount;
-            return;
+            return Ok(());
         }
 
         // This check is my waterloo; it's the only thing Vec wouldn't have to do.
@@ -512,12 +514,13 @@ impl<T> RawVec<T> {
                                            amount * elem_size,
                                            align);
                 if ptr.is_null() {
-                    oom()
+                    return Err(());
                 }
                 self.ptr = Unique::new(ptr as *mut _);
             }
             self.cap = amount;
         }
+        Ok(())
     }
 
     /// This is a stupid name in the hopes that someone will find this in the

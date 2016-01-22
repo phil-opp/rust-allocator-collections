@@ -71,7 +71,6 @@
 #![no_std]
 
 #![feature(box_syntax)]
-#![feature(core_intrinsics)]
 #![feature(custom_attribute)]
 #![feature(fundamental)]
 #![feature(lang_items)]
@@ -109,7 +108,5 @@ extern crate log;
 pub mod heap;
 
 pub mod raw_vec;
-pub mod oom;
 
-pub use oom::oom;
 pub mod allocator;
